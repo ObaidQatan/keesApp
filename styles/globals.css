@@ -1,0 +1,29 @@
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+  transition: .3s;
+  user-select: none;
+  --webkit-tap-highlight-color: none;
+}
+
+.scrollbar::-webkit-scrollbar{
+  background-color: transparent;
+  width: 2px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb{
+  background-color: #00000020;
+  border-radius: 10px;
+}
