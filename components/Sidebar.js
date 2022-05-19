@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { Chat as ChatIcon, MoreVert, Search as SearchIcon } from "@mui/icons-material";
+import { AddComment as ChatIcon, MoreVert, Search as SearchIcon } from "@mui/icons-material";
 import { Avatar, Button, IconButton, ThemeProvider} from "@mui/material";
 import { collection, getDocs, query, setDoc, where } from "firebase/firestore";
 import { useState, useEffect } from "react";
@@ -71,7 +71,7 @@ function Sidebar() {
             <UserAvatar src={user.photoURL} onClick={()=>auth.signOut()} />
 
             <IconsContainer>
-              <IconButton>
+              <IconButton  onClick={()=>startNewChat()}>
                 <ChatIcon />
               </IconButton>
 
@@ -87,11 +87,6 @@ function Sidebar() {
             <SearchInput placeholder="Search in chats" />
           </Search>
 
-          <ThemeProvider theme={primaryTheme}>
-          <StartChatButton variant="contained" color="neutral" onClick={()=>startNewChat()}>
-            Start New Chat
-          </StartChatButton>
-          </ThemeProvider>
           <p style={{ textAlign:'center'}}>{loading?"Loading Chats...":chatsSnapshot.size===0?"No Chats Found":""}</p>
 
           {/* {userChats.map(chat=>(
@@ -114,9 +109,8 @@ const Container = styled.div`
   height: 100vh;
   min-width: 300px;
   max-width: 350px;
-  border-right: 1px solid whitesmoke;
   box-shadow: #00000026 5px 0px 10px;
-  border-radius: 0px 15px 15px 0px;
+  border-radius: 0 20px 20px 0;
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -155,15 +149,11 @@ const Search = styled.div`
 const SearchInput = styled.input`
   outline: none;
   border: none;
+  border-radius: 10px;
+  color: grey;
   flex: 1;
+  font-family: inherit;
 `;
-
-const StartChatButton = styled(Button)`
-  width: 100%;
-  &&{box-shadow: none;}
-  border-bottom: 1px solid whitesmoke;
-  border-top: 1px solid whitesmoke;
-  `;
 
 const ChatsList = styled.div`
   overflow-y: overlay;

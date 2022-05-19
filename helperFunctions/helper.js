@@ -33,3 +33,13 @@ export const createNewChat = (providedEmail, currentEmail, chatsRef)=>{
 
 
 export const getChatEmail = (users)=>(users.filter(email=>email!==getUser().email)[0]);
+
+
+export const utf8ToBase64 = (string)=>{
+    return Buffer.from(string,'utf-8').toString('base64');
+}
+
+
+export const base64ToUtf8 = (string)=>{
+    return Buffer.from(string,'base64').toString('utf-8');
+}
