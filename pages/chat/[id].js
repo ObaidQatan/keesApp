@@ -1,19 +1,35 @@
 import styled from "@emotion/styled"
+import styles from './[id].module.css';
 import { AttachFile, EmojiEmotions, MoreVert, Send } from "@mui/icons-material"
-import { Avatar, IconButton, Input } from "@mui/material"
-import { collection, query, where } from "firebase/firestore"
+import { Avatar, IconButton, Input, TextField } from "@mui/material"
+import { collection, doc, getDoc, query, where } from "firebase/firestore"
 import Head from "next/head"
 import { useCollection } from "react-firebase-hooks/firestore"
 import Sidebar from "../../components/Sidebar"
 import Message from "../../components/Message"
 import { db } from "../../firebase"
 import { base64ToUtf8 } from "../../helperFunctions/helper"
+import { useState } from "react"
 
 
-function Chat({recipient,messages}) {
+function Chat({chatID, recipient,messages}) {
 
     if(!recipient)
         return window.location.href = '/';
+
+    const [msgInputValue, setMsgInputValue] = useState('');
+
+    const handleInputChange = (e)=>{
+        console.log(e.target.value);
+        setMsgInputValue(e.target.value);
+    }
+
+    const handleSendMessage = ()=>{
+        if(!msgInputValue.trim().length)
+            return;
+
+            //TODO: construct message
+    }
         
     return (
     <Container>
@@ -48,8 +64,8 @@ function Chat({recipient,messages}) {
 
             <Body>
                 <MessagesSection>
-                   {messages.map((message,index)=>(
-                        <Message key={index} content={message.content} />
+                   {messages.map(message=>(
+                        <Message key={message.id} id={message.id} senderEmail={message.senderEmail} content={message.content} date={message.date}/>
                     ))}
                 </MessagesSection>
 
@@ -59,9 +75,10 @@ function Chat({recipient,messages}) {
                         <EmojiEmotions />
                     </IconButton>
 
-                    <InputField />
+                    <InputField onChange={handleInputChange} value={msgInputValue} multiline variant="filled" label="Type..." 
+                    InputProps={{classes: {input: styles['chat-input-field']}}} />
                         
-                    <SendButton />
+                    <SendButton onClick={()=>handleSendMessage()} />
                         
 
                 </InputSection>
@@ -82,15 +99,36 @@ export async function getServerSideProps(context) {
         }
 
     const recipient = JSON.parse(base64ToUtf8(target));
-    const messages = [
-        {id:1,content:'Hello',senderID:'senderId'},
-        {id:2,content:'hii',senderID:'recipientId'},
-        {id:3,content:'howr u!',senderID:'senderId'},
-    ];
+    const chatID = context.params.id;
+    const chatSnapshot = await getDoc(doc(db,`chats/${chatID}`));
+    const messages = chatSnapshot?.get('messages');
+        //timestamp check
+
+    // const messages = [
+    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
+    // ];
   return {
     props: {
-      messages,
-      recipient
+        chatID,
+        messages: messages?messages:[],
+        recipient
     },
   }
 }
@@ -105,8 +143,8 @@ const ChatAvatar = ({recipient})=>(
   )
 )
 
-const SendButton = ()=>(
-    <IconButton style={{
+const SendButton = ({onClick})=>(
+    <IconButton onClick={onClick} style={{
         marginLeft:'auto',
     }}>
         <Send />
@@ -115,13 +153,13 @@ const SendButton = ()=>(
 
 const Container = styled.div`
     display: flex;
+    height: 100vh;
 `;
 
 const ChatSection = styled.div`
     display: flex;
     flex-direction: column;
     flex: 1;
-    height: 100vh;
     background-color: whitesmoke;
 `
 
@@ -157,11 +195,20 @@ const Body = styled.div`
     display: flex;
     flex-direction: column;
     flex: 1;
+    overflow-y: hidden;
 `;
 
 const MessagesSection = styled.div`
-    flex: 1;
     overflow-y: scroll;
+    flex: 1;
+    ::-webkit-scrollbar {
+        width: 3px;
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #00000060;
+        border-radius: 10px;
+    }
 `;
 
 const InputSection = styled.div`
@@ -171,10 +218,8 @@ const InputSection = styled.div`
     background-color: white;
 `;
 
-const InputField = styled(Input)`
-    background-color: #00000010;
-    border-radius: 10px 10px 0 0;
+const InputField = styled(TextField)`
     flex: 1;
-    padding: 5px;
-    font-family: Nunito;
+    font-family: Nunito-Medium;
+    font-size: 15px;
 `;
