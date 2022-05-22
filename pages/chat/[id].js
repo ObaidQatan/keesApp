@@ -241,7 +241,7 @@ const RecipientStatus = ({status})=>{
             return <StatusAvailable>{status}</StatusAvailable>
         }
     }else{
-        return <p>'...'</p>
+        return <p>...</p>
     }
 }
 
