@@ -14,173 +14,176 @@ import { useRef, useState } from "react"
 
 function Chat({chatID, recipient,messages}) {
 
-    if(!recipient)
-        return window.location.href = '/';
-    
-
-    const [msgInputValue, setMsgInputValue] = useState('');
-    const [recipientAvailablity, setRecipientAvailablity] = useState('');
-    const user = getUser();
-    updateLastSeen(user);
-    
-    recipient = JSON.parse(base64ToUtf8(recipient));
-    messages = JSON.parse(messages);
-    getRecipientAvailablity(recipient, setRecipientAvailablity, 30000);
-    
-
-    const [messagesSnapshot] = useCollection(query(collection(db,`chats/${chatID}/messages`), orderBy('message.date','asc')));
-    const bottomRef = useRef();
-    const [isSending,setIsSending] = useState(false);
-    const [sendingMsg,setSendingMsg] = useState('');
-
-    const scrollToBottom = ()=>{
-        bottomRef.current?.scrollIntoView();
-        setTimeout(() => {
-            bottomRef.current?.scrollIntoView();
-        }, 100);
-    }
-    const handleInputChange = (e)=>{
-        onkeydown = (e)=>{
-            if(e.key==='Enter' && e.ctrlKey){
-                return handleSendMessage();
-            }
-        }
-        setMsgInputValue(e.target.value);
-    }
-
-
-    const handleSendMessage = ()=>{
-        if(!msgInputValue.trim().length)
-            return;
-
-            setSendingMsg(`${msgInputValue} (sending...)`);
-            setIsSending(true);
-            // renderPendingMessage();
-            scrollToBottom();
-            //{id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'}
-            const message = {
-                id: Math.random(12).toString().slice(2),
-                content: msgInputValue,
-                senderEmail: user.email,
-                date: serverTimestamp()
-            }
-
-            let unsubscribe = onSnapshot(doc(db,`chats/${chatID}/messages/${message.id}`),(snapshot)=>{
-                if(snapshot.exists()){
-                    //Note: message sent
-                    setIsSending(false);
-                    setMsgInputValue('');
-                    scrollToBottom();
-                    unsubscribe();
-
-                }else{
-                    //Note: message not sent
-                    if(navigator.onLine){
-                        setDoc(doc(db,`chats/${chatID}/messages/${message.id}`)
-                        ,{message});
-                    }else{
-                        setMsgInputValue('');
-                        setSendingMsg(`${msgInputValue} (failed to send!)`);
-                        scrollToBottom();
-                    }
-                }
-            },(error)=>{
-                setMsgInputValue('');
-                setSendingMsg(`${msgInputValue} (failed to send!)`);
-                scrollToBottom();
-            });
-
-    }
-
-
-    const renderMessages = ()=>{
-        if(messagesSnapshot){
-            return (
-                messagesSnapshot.docs?.map(msgSnap=>(
-                    <Message key={msgSnap.data().message.id} id={msgSnap.data().message.id} content={msgSnap.data().message.content} senderEmail={msgSnap.data().message.senderEmail} date={msgSnap.data().message.date?.toDate()?.toISOString()} />
-                ))
-            )
-
-        }else{
-            return (
-                messages.map(message=>(
-                    <Message key={message.id} id={message.id} senderEmail={message.senderEmail} content={message.content} date={message.date}/>
-                ))
-            )
-        }
-    }
-
-    const renderPendingMessage = ()=>(
-        <Message sending={true} id={0} content={sendingMsg} senderEmail={user.email} date={new Date().toISOString()} />
-    )
-
+    if(recipient){
+        const [msgInputValue, setMsgInputValue] = useState('');
+        const [recipientAvailablity, setRecipientAvailablity] = useState('');
+        const user = getUser();
+        updateLastSeen(user);
         
-    return (
-    <Container>
-        <Head>
-            <title>Kees | {recipient.email}</title>
-        </Head>
-
-        <Sidebar />
-
-        <ChatSection>
-
-            <Header>
-                <ChatAvatar recipient={{email: recipient.email, photo: recipient.photo}} />
-
-                <RecipientName>
-
-                    {recipient.name?recipient.name:recipient.email}
-                    <br/>
-                    
-                    <RecipientStatus status={recipientAvailablity} />
-                        
-                </RecipientName>
-
-                <ChatOptions>
-
-                    <IconButton>
-                        <AttachFile />
-                    </IconButton>
-
-                    <IconButton>
-                        <MoreVert />
-                    </IconButton>
-
-                </ChatOptions>
-
-            </Header>
-
-            <Body>
-                <MessagesSection>
-
-                   {renderMessages()}
-                   {scrollToBottom()}
-
-                {isSending &&
-                renderPendingMessage()
+        recipient = JSON.parse(base64ToUtf8(recipient));
+        messages = JSON.parse(messages);
+        getRecipientAvailablity(recipient, setRecipientAvailablity, 30000);
+        
+    
+        const [messagesSnapshot] = useCollection(query(collection(db,`chats/${chatID}/messages`), orderBy('message.date','asc')));
+        const bottomRef = useRef();
+        const [isSending,setIsSending] = useState(false);
+        const [sendingMsg,setSendingMsg] = useState('');
+    
+        const scrollToBottom = ()=>{
+            bottomRef.current?.scrollIntoView();
+            setTimeout(() => {
+                bottomRef.current?.scrollIntoView();
+            }, 100);
+        }
+        const handleInputChange = (e)=>{
+            onkeydown = (e)=>{
+                if(e.key==='Enter' && e.ctrlKey){
+                    return handleSendMessage();
                 }
-
-                <BottomOfMessagesSection ref={bottomRef} />
-                </MessagesSection>
-
-                <InputSection>
-
-                    <IconButton>
-                        <EmojiEmotions />
-                    </IconButton>
-
-                    <InputField onChange={handleInputChange} value={msgInputValue} multiline variant="filled" label="Type..." 
-                    InputProps={{classes: {input: styles['chat-input-field']}}} />
+            }
+            setMsgInputValue(e.target.value);
+        }
+    
+    
+        const handleSendMessage = ()=>{
+            if(!msgInputValue.trim().length)
+                return;
+    
+                setSendingMsg(`${msgInputValue} (sending...)`);
+                setIsSending(true);
+                // renderPendingMessage();
+                scrollToBottom();
+                //{id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'}
+                const message = {
+                    id: Math.random(12).toString().slice(2),
+                    content: msgInputValue,
+                    senderEmail: user.email,
+                    date: serverTimestamp()
+                }
+    
+                let unsubscribe = onSnapshot(doc(db,`chats/${chatID}/messages/${message.id}`),(snapshot)=>{
+                    if(snapshot.exists()){
+                        //Note: message sent
+                        setIsSending(false);
+                        setMsgInputValue('');
+                        scrollToBottom();
+                        unsubscribe();
+    
+                    }else{
+                        //Note: message not sent
+                        if(navigator.onLine){
+                            setDoc(doc(db,`chats/${chatID}/messages/${message.id}`)
+                            ,{message});
+                        }else{
+                            setMsgInputValue('');
+                            setSendingMsg(`${msgInputValue} (failed to send!)`);
+                            scrollToBottom();
+                        }
+                    }
+                },(error)=>{
+                    setMsgInputValue('');
+                    setSendingMsg(`${msgInputValue} (failed to send!)`);
+                    scrollToBottom();
+                });
+    
+        }
+    
+    
+        const renderMessages = ()=>{
+            if(messagesSnapshot){
+                return (
+                    messagesSnapshot.docs?.map(msgSnap=>(
+                        <Message key={msgSnap.data().message.id} id={msgSnap.data().message.id} content={msgSnap.data().message.content} senderEmail={msgSnap.data().message.senderEmail} date={msgSnap.data().message.date?.toDate()?.toISOString()} />
+                    ))
+                )
+    
+            }else{
+                return (
+                    messages.map(message=>(
+                        <Message key={message.id} id={message.id} senderEmail={message.senderEmail} content={message.content} date={message.date}/>
+                    ))
+                )
+            }
+        }
+    
+        const renderPendingMessage = ()=>(
+            <Message sending={true} id={0} content={sendingMsg} senderEmail={user.email} date={new Date().toISOString()} />
+        )
+    
+            
+        return (
+        <Container>
+            <Head>
+                <title>Kees | {recipient.email}</title>
+            </Head>
+    
+            <Sidebar />
+    
+            <ChatSection>
+    
+                <Header>
+                    <ChatAvatar recipient={{email: recipient.email, photo: recipient.photo}} />
+    
+                    <RecipientName>
+    
+                        {recipient.name?recipient.name:recipient.email}
+                        <br/>
                         
-                    <SendButton onClick={()=>handleSendMessage()} />
-                   
-                </InputSection>
-            </Body>
+                        <RecipientStatus status={recipientAvailablity} />
+                            
+                    </RecipientName>
+    
+                    <ChatOptions>
+    
+                        <IconButton>
+                            <AttachFile />
+                        </IconButton>
+    
+                        <IconButton>
+                            <MoreVert />
+                        </IconButton>
+    
+                    </ChatOptions>
+    
+                </Header>
+    
+                <Body>
+                    <MessagesSection>
+    
+                       {renderMessages()}
+                       {scrollToBottom()}
+    
+                    {isSending &&
+                    renderPendingMessage()
+                    }
+    
+                    <BottomOfMessagesSection ref={bottomRef} />
+                    </MessagesSection>
+    
+                    <InputSection>
+    
+                        <IconButton>
+                            <EmojiEmotions />
+                        </IconButton>
+    
+                        <InputField onChange={handleInputChange} value={msgInputValue} multiline variant="filled" label="Type..." 
+                        InputProps={{classes: {input: styles['chat-input-field']}}} />
+                            
+                        <SendButton onClick={()=>handleSendMessage()} />
+                       
+                    </InputSection>
+                </Body>
+    
+            </ChatSection>
+        </Container>
+      )
 
-        </ChatSection>
-    </Container>
-  )
+    }else{
+        return window.location.href = '/';
+    }
+    
+
 }
 
 export default Chat
