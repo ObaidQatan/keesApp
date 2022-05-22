@@ -2,34 +2,118 @@ import styled from "@emotion/styled"
 import styles from './[id].module.css';
 import { AttachFile, EmojiEmotions, MoreVert, Send } from "@mui/icons-material"
 import { Avatar, IconButton, Input, TextField } from "@mui/material"
-import { collection, doc, getDoc, query, where } from "firebase/firestore"
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, SnapshotMetadata, where } from "firebase/firestore"
 import Head from "next/head"
 import { useCollection } from "react-firebase-hooks/firestore"
 import Sidebar from "../../components/Sidebar"
 import Message from "../../components/Message"
 import { db } from "../../firebase"
-import { base64ToUtf8 } from "../../helperFunctions/helper"
-import { useState } from "react"
+import { base64ToUtf8, getRecipientAvailablity, getUser, updateLastSeen } from "../../helperFunctions/helper"
+import { useRef, useState } from "react"
 
 
 function Chat({chatID, recipient,messages}) {
 
     if(!recipient)
         return window.location.href = '/';
+    
 
     const [msgInputValue, setMsgInputValue] = useState('');
+    const [recipientAvailablity, setRecipientAvailablity] = useState('');
+    const user = getUser();
+    updateLastSeen(user);
+    
+    recipient = JSON.parse(base64ToUtf8(recipient));
+    messages = JSON.parse(messages);
+    getRecipientAvailablity(recipient, setRecipientAvailablity, 30000);
+    
 
+    const [messagesSnapshot] = useCollection(query(collection(db,`chats/${chatID}/messages`), orderBy('message.date','asc')));
+    const bottomRef = useRef();
+    const [isSending,setIsSending] = useState(false);
+    const [sendingMsg,setSendingMsg] = useState('');
+
+    const scrollToBottom = ()=>{
+        bottomRef.current?.scrollIntoView();
+        setTimeout(() => {
+            bottomRef.current?.scrollIntoView();
+        }, 100);
+    }
     const handleInputChange = (e)=>{
-        console.log(e.target.value);
+        onkeydown = (e)=>{
+            if(e.key==='Enter' && e.ctrlKey){
+                return handleSendMessage();
+            }
+        }
         setMsgInputValue(e.target.value);
     }
+
 
     const handleSendMessage = ()=>{
         if(!msgInputValue.trim().length)
             return;
 
-            //TODO: construct message
+            setSendingMsg(`${msgInputValue} (sending...)`);
+            setIsSending(true);
+            // renderPendingMessage();
+            scrollToBottom();
+            //{id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'}
+            const message = {
+                id: Math.random(12).toString().slice(2),
+                content: msgInputValue,
+                senderEmail: user.email,
+                date: serverTimestamp()
+            }
+
+            let unsubscribe = onSnapshot(doc(db,`chats/${chatID}/messages/${message.id}`),(snapshot)=>{
+                if(snapshot.exists()){
+                    //Note: message sent
+                    setIsSending(false);
+                    setMsgInputValue('');
+                    scrollToBottom();
+                    unsubscribe();
+
+                }else{
+                    //Note: message not sent
+                    if(navigator.onLine){
+                        setDoc(doc(db,`chats/${chatID}/messages/${message.id}`)
+                        ,{message});
+                    }else{
+                        setMsgInputValue('');
+                        setSendingMsg(`${msgInputValue} (failed to send!)`);
+                        scrollToBottom();
+                    }
+                }
+            },(error)=>{
+                setMsgInputValue('');
+                setSendingMsg(`${msgInputValue} (failed to send!)`);
+                scrollToBottom();
+            });
+
     }
+
+
+    const renderMessages = ()=>{
+        if(messagesSnapshot){
+            return (
+                messagesSnapshot.docs?.map(msgSnap=>(
+                    <Message key={msgSnap.data().message.id} id={msgSnap.data().message.id} content={msgSnap.data().message.content} senderEmail={msgSnap.data().message.senderEmail} date={msgSnap.data().message.date?.toDate()?.toISOString()} />
+                ))
+            )
+
+        }else{
+            return (
+                messages.map(message=>(
+                    <Message key={message.id} id={message.id} senderEmail={message.senderEmail} content={message.content} date={message.date}/>
+                ))
+            )
+        }
+    }
+
+    const renderPendingMessage = ()=>(
+        <Message sending={true} id={0} content={sendingMsg} senderEmail={user.email} date={new Date().toISOString()} />
+    )
+
         
     return (
     <Container>
@@ -45,7 +129,12 @@ function Chat({chatID, recipient,messages}) {
                 <ChatAvatar recipient={{email: recipient.email, photo: recipient.photo}} />
 
                 <RecipientName>
+
                     {recipient.name?recipient.name:recipient.email}
+                    <br/>
+                    
+                    <RecipientStatus status={recipientAvailablity} />
+                        
                 </RecipientName>
 
                 <ChatOptions>
@@ -64,9 +153,15 @@ function Chat({chatID, recipient,messages}) {
 
             <Body>
                 <MessagesSection>
-                   {messages.map(message=>(
-                        <Message key={message.id} id={message.id} senderEmail={message.senderEmail} content={message.content} date={message.date}/>
-                    ))}
+
+                   {renderMessages()}
+                   {scrollToBottom()}
+
+                {isSending &&
+                renderPendingMessage()
+                }
+
+                <BottomOfMessagesSection ref={bottomRef} />
                 </MessagesSection>
 
                 <InputSection>
@@ -79,8 +174,7 @@ function Chat({chatID, recipient,messages}) {
                     InputProps={{classes: {input: styles['chat-input-field']}}} />
                         
                     <SendButton onClick={()=>handleSendMessage()} />
-                        
-
+                   
                 </InputSection>
             </Body>
 
@@ -98,37 +192,21 @@ export async function getServerSideProps(context) {
             props: {}
         }
 
-    const recipient = JSON.parse(base64ToUtf8(target));
     const chatID = context.params.id;
-    const chatSnapshot = await getDoc(doc(db,`chats/${chatID}`));
-    const messages = chatSnapshot?.get('messages');
-        //timestamp check
+    const messagesSnapshot = await getDocs(query(collection(db,`chats/${chatID}/messages`), orderBy('message.date','asc')));
+    const messages = messagesSnapshot?.docs?.map(msg=>({
+        date: msg.data().message.date.toDate().toISOString(),
+        id: msg.data().message.id,
+        content: msg.data().message.content,
+        senderEmail: msg.data().message.senderEmail
+    }));
 
-    // const messages = [
-    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:1,content:'Hello',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:2,content:'hii',senderEmail:'oqaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    //     {id:3,content:'howr u!',senderEmail:'ogaten27@gmail.com', date: '2020-01-01T00:00:00.000Z'},
-    // ];
+
   return {
     props: {
         chatID,
-        messages: messages?messages:[],
-        recipient
+        messages: messages? JSON.stringify(messages): '[]',
+        recipient: target
     },
   }
 }
@@ -150,6 +228,18 @@ const SendButton = ({onClick})=>(
         <Send />
     </IconButton>
 )
+
+const RecipientStatus = ({status})=>{
+    if(status){
+        if(status==='Unknown' || status.toString().toLowerCase().indexOf('last seen') > -1){
+            return <StatusNotAvailable>{status}</StatusNotAvailable>
+        }else if(status==='Available'){
+            return <StatusAvailable>{status}</StatusAvailable>
+        }
+    }else{
+        return <p>'...'</p>
+    }
+}
 
 const Container = styled.div`
     display: flex;
@@ -184,6 +274,16 @@ const RecipientName = styled.h3`
     font-weight: bold;
     margin-right: auto;
     margin-left: 10px;
+`;
+
+const StatusAvailable = styled.p`
+    font-size: 12px;
+    color: #1cbba6;
+`;
+
+const StatusNotAvailable = styled.p`
+    font-size: 12px;
+    color: #888b8a;
 `;
 
 const ChatOptions = styled.div`
@@ -223,3 +323,5 @@ const InputField = styled(TextField)`
     font-family: Nunito-Medium;
     font-size: 15px;
 `;
+
+const BottomOfMessagesSection = styled.div``;

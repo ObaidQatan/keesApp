@@ -1,13 +1,23 @@
 import styled from "@emotion/styled";
 import { getMsgTime, getUser } from "../helperFunctions/helper";
 
-function Message({id, senderEmail, content, date}) {
+function Message({id, senderEmail, content, date, sending}) {
   const user = getUser();
 
-  if(senderEmail===user.email)
-  return (
+  const renderSenderOrPendingMessage = ()=>(
+    sending?
+    <PendingMessage content={content} senderEmail={senderEmail} date={date} />
+    :
     <SenderMessage content={content} senderEmail={senderEmail} date={date} />
   )
+
+  const renderSenderMessageThenDetermineIfPending = ()=>(
+    <SenderMessage sending={sending} content={content} senderEmail={senderEmail} date={date} />
+  )
+
+  if(senderEmail===user.email)
+    return renderSenderMessageThenDetermineIfPending(); 
+
   else
   return (
     <RecipientMessage content={content} senderEmail={senderEmail} date={date} />
@@ -16,8 +26,30 @@ function Message({id, senderEmail, content, date}) {
 
 export default Message
 
-const SenderMessage = ({senderEmail, content, date})=>(
-  <SenderMessageBody>
+const SenderMessage = ({senderEmail, content, date, sending})=>(
+  <SenderMessageBody style={{
+    transition: '1s',
+    backgroundColor: `${sending?'#95a7b750':'#95a7b7'}`,
+  }}>
+    <SenderName>
+      {senderEmail}
+    </SenderName>
+
+    <MessageContent>
+    {content}
+    </MessageContent>
+
+    <Time>
+      {getMsgTime(date?date:new Date().toISOString())}
+    </Time>
+
+  </SenderMessageBody>
+)
+
+const PendingMessage = ({senderEmail, content, date})=>(
+  <SenderMessageBody style={{
+    backgroundColor: 'tomato',
+  }}>
     <SenderName>
       {senderEmail}
     </SenderName>

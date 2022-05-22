@@ -1,7 +1,7 @@
 import { validate } from 'email-validator';
-import { addDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 
 
 
@@ -56,4 +56,37 @@ export const getMsgTime = timestamp =>{
 
     minutes = minutes < 10 ? '0'+minutes : minutes;
     return `${hours}:${minutes} ${ampm}`;
+}
+
+export const updateLastSeen = (user)=>{
+    updateDoc(doc(db,`users/${user.uid}`),{
+        lastSeen: serverTimestamp()
+    });
+    setTimeout(() => {
+        updateLastSeen(user);
+    }, 30*1000);
+}
+
+export const getRecipientAvailablity = (recipient, setAvailablity, timeout)=>{
+    let unsubscribe = onSnapshot(query(collection(db,`users`),where('email','==',recipient.email)),
+    (snapshot)=>{
+        unsubscribe();
+        if(snapshot.empty){
+            //Note: recipient does not exist
+            setAvailablity('Unknown');
+            setTimeout(() => {
+               return getRecipientAvailablity(recipient, setAvailablity, timeout); 
+            }, timeout);
+        }else{
+            //Note: recipient exists
+            let milliSeconds = snapshot?.docs?.[0]?.data()?.lastSeen?.toDate()?.getTime();
+            if(milliSeconds){
+                let currentMilliSeconds = new Date().getTime();
+                setAvailablity((currentMilliSeconds-milliSeconds) <= timeout ? 'Available':`Last seen ${snapshot?.docs?.[0]?.data()?.lastSeen?.toDate()?.toLocaleString()}`);
+                setTimeout(() => {
+                   return getRecipientAvailablity(recipient, setAvailablity, timeout); 
+                }, timeout);
+            }
+        }
+    });
 }

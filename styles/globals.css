@@ -16,6 +16,7 @@ a {
   transition: .3s;
   user-select: none;
   --webkit-tap-highlight-color: none;
+  transition: .3s;
 }
 
 .scrollbar::-webkit-scrollbar{

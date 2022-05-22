@@ -63,12 +63,17 @@ function Sidebar() {
     //TODO: if email is valid && email does not exist within current user chats collection && email is not a chat with itself (currentUser)
 
   }
+
+  const handleSignOut = ()=>{
+    auth.signOut()
+    window.location.href = '/';
+  }
   return (
       <Container>
 
           <Header>
 
-            <UserAvatar src={user.photoURL} onClick={()=>auth.signOut()} />
+            <UserAvatar src={user.photoURL} onClick={()=>handleSignOut()} />
 
             <IconsContainer>
               <IconButton  onClick={()=>startNewChat()}>
@@ -87,7 +92,7 @@ function Sidebar() {
             <SearchInput placeholder="Search in chats" />
           </Search>
 
-          <p style={{ textAlign:'center'}}>{loading?"Loading Chats...":chatsSnapshot.size===0?"No Chats Found":""}</p>
+          <p style={{ textAlign:'center'}}>{loading?"Loading Chats...":chatsSnapshot?.size===0?"No Chats Found":""}</p>
 
           {/* {userChats.map(chat=>(
             <p>{chat.users.filter(email=>email!==user.email)[0]}</p>
