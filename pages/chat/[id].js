@@ -48,7 +48,7 @@ function Chat({chatID, recipient,messages}) {
         })
       }
 
-      const checkIfMobileWindow = ()=>{
+      const useMobileWindowChecker = ()=>{
         useEffect(()=>{
             if(window.innerWidth <= 700) 
                 setIsHidden(true);
@@ -64,12 +64,13 @@ function Chat({chatID, recipient,messages}) {
         }, 100);
     }
     const handleInputChange = (e)=>{
+        setMsgInputValue(e.target.value);
+        
         onkeydown = (e)=>{
             if(e.key==='Enter' && e.ctrlKey){
                 return handleSendMessage();
             }
         }
-        setMsgInputValue(e.target.value);
     }
 
     const handleHideSideBar = ()=>{
@@ -143,7 +144,7 @@ function Chat({chatID, recipient,messages}) {
     )
 
     listenToWindowResize();
-    checkIfMobileWindow();
+    useMobileWindowChecker();
 
         
     return (
@@ -300,6 +301,11 @@ const HideSideBarButton = styled(IconButton)`
   top: 40%;
   background-color: white;
   cursor: pointer;
+  box-shadow: 0px 0px 10px #6a6a6abf;
+
+  &:hover{
+    background-color: #e7e7e7;
+  }
 `;
 
 const Header = styled.div`

@@ -85,6 +85,11 @@ const HideSideBarButton = styled(IconButton)`
   top: 40%;
   background-color: white;
   cursor: pointer;
+  box-shadow: 0px 0px 10px #6a6a6abf;
+
+  &:hover{
+    background-color: #e7e7e7;
+  }
 `;
 
 
