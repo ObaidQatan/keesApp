@@ -1,6 +1,6 @@
 import styled from "@emotion/styled"
 import styles from './[id].module.css';
-import { AttachFile, EmojiEmotions, MoreVert, Send } from "@mui/icons-material"
+import { AttachFile, EmojiEmotions, HideSourceRounded, MoreVert, Send } from "@mui/icons-material"
 import { Avatar, IconButton, Input, TextField } from "@mui/material"
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, SnapshotMetadata, where } from "firebase/firestore"
 import Head from "next/head"
@@ -21,6 +21,8 @@ function Chat({chatID, recipient,messages}) {
     }
     ,[recipient])
 
+    const [isHidden, setIsHidden] = useState(false);
+
     const [msgInputValue, setMsgInputValue] = useState('');
     const [recipientAvailablity, setRecipientAvailablity] = useState('');
     const user = getUser();
@@ -36,6 +38,25 @@ function Chat({chatID, recipient,messages}) {
     const [isSending,setIsSending] = useState(false);
     const [sendingMsg,setSendingMsg] = useState('');
 
+   
+    const listenToWindowResize = ()=>{
+        addEventListener('resize',(e)=>{
+          if(window.innerWidth <= 700) 
+            setIsHidden(true);
+          else
+            setIsHidden(false)
+        })
+      }
+
+      const checkIfMobileWindow = ()=>{
+        useEffect(()=>{
+            if(window.innerWidth <= 700) 
+                setIsHidden(true);
+            else
+                setIsHidden(false)
+        },[])
+      }
+
     const scrollToBottom = ()=>{
         bottomRef.current?.scrollIntoView();
         setTimeout(() => {
@@ -49,6 +70,10 @@ function Chat({chatID, recipient,messages}) {
             }
         }
         setMsgInputValue(e.target.value);
+    }
+
+    const handleHideSideBar = ()=>{
+        setIsHidden(!isHidden);
     }
 
 
@@ -117,6 +142,9 @@ function Chat({chatID, recipient,messages}) {
         <Message sending={true} id={0} content={sendingMsg} senderEmail={user.email} date={new Date().toISOString()} />
     )
 
+    listenToWindowResize();
+    checkIfMobileWindow();
+
         
     return (
     <Container>
@@ -124,7 +152,7 @@ function Chat({chatID, recipient,messages}) {
             <title>Kees | {recipient.email}</title>
         </Head>
 
-        <Sidebar />
+        <Sidebar isHidden={isHidden}/>
 
         <ChatSection>
 
@@ -157,14 +185,19 @@ function Chat({chatID, recipient,messages}) {
             <Body>
                 <MessagesSection>
 
-                   {renderMessages()}
-                   {scrollToBottom()}
+                    <HideSideBarButton onClick={handleHideSideBar} >
+                        <HideSourceRounded/>
+                    </HideSideBarButton>
 
-                {isSending &&
-                renderPendingMessage()
-                }
 
-                <BottomOfMessagesSection ref={bottomRef} />
+                    {renderMessages()}
+                    {scrollToBottom()}
+
+                    {isSending &&
+                    renderPendingMessage()
+                    }
+
+                    <BottomOfMessagesSection ref={bottomRef} />
                 </MessagesSection>
 
                 <InputSection>
@@ -248,6 +281,7 @@ const RecipientStatus = ({status})=>{
 const Container = styled.div`
     display: flex;
     height: 100vh;
+    width: 100vw;
 `;
 
 const ChatSection = styled.div`
@@ -256,6 +290,17 @@ const ChatSection = styled.div`
     flex: 1;
     background-color: whitesmoke;
 `
+
+const HideSideBarButton = styled(IconButton)`
+  width: 30px;
+  height: 30px;
+  z-index: 100;
+  position: absolute;
+  right: 0;
+  top: 40%;
+  background-color: white;
+  cursor: pointer;
+`;
 
 const Header = styled.div`
     position: sticky;

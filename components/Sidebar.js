@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { AddComment as ChatIcon, MoreVert, Search as SearchIcon } from "@mui/icons-material";
+import { AddComment as ChatIcon, HideSource, HideSourceRounded, MoreVert, Search as SearchIcon } from "@mui/icons-material";
 import { Avatar, Button, IconButton, ThemeProvider} from "@mui/material";
 import { collection, getDocs, query, setDoc, where } from "firebase/firestore";
 import { useState, useEffect } from "react";
@@ -11,38 +11,12 @@ import { primaryTheme } from "../styles/styled-themes";
 import { css } from '@emotion/react';
 import Chat from "./Chat";
 
-function Sidebar() {
+function Sidebar({isHidden}) {
 
   const user = getUser();
   const [loadingChatsMsg, setLoadingChatsMsg] = useState("loading chats...");
   // const [userChats, setUserChats] = useState([]);
   const [chatsSnapshot, loading] = useCollection(query(collection(db,'chats'), where('users','array-contains',user.email)));
-
-  // const fetchUserChats = async ()=>{
-  //   console.log('start function')
-  //   const q = query(collection(db,'chats'), where('users','array-contains',user.email));
-  //   const snapshot = await getDocs(q);
-  //   // setChatsSnapshot(snapshot);
-  //   snapshot.forEach(doc=>{
-  //     userChatsArray.push(doc.data());
-  //   })
-  // }
-
-  // fetchUserChats();
-  
-  // useEffect(()=>{
-  //   if(chatsSnapshot?.docs){
-  //     setUserChats(chatsSnapshot.docs.map(doc=>doc.data()));
-  //   }
-  // },[chatsSnapshot]);
-
-  // useEffect(()=>{
-  //   if(userChats.length === 0)
-  //     setLoadingChatsMsg("No Chats Found!");
-  //   else
-  //     setLoadingChatsMsg(null);
-  // },[userChats]);
-  
 
   
   const startNewChat = ()=>{
@@ -68,8 +42,9 @@ function Sidebar() {
     auth.signOut()
     window.location.href = '/';
   }
+
   return (
-      <Container>
+      <Container style={isHidden?{transform: 'translateX(-100%)'}:{}}>
 
           <Header>
 
@@ -93,6 +68,8 @@ function Sidebar() {
           </Search>
 
           <p style={{ textAlign:'center'}}>{loading?"Loading Chats...":chatsSnapshot?.size===0?"No Chats Found":""}</p>
+        
+        
 
           {/* {userChats.map(chat=>(
             <p>{chat.users.filter(email=>email!==user.email)[0]}</p>
@@ -110,7 +87,7 @@ function Sidebar() {
 export default Sidebar;
 
 const Container = styled.div`
-  flex: 0.45;
+  position: absolute;
   height: 100vh;
   min-width: 300px;
   max-width: 350px;
@@ -119,6 +96,7 @@ const Container = styled.div`
   z-index: 100;
   display: flex;
   flex-direction: column;
+  background-color: white;
 `;
 
 
@@ -159,6 +137,7 @@ const SearchInput = styled.input`
   flex: 1;
   font-family: inherit;
 `;
+
 
 const ChatsList = styled.div`
   overflow-y: overlay;

@@ -1,8 +1,37 @@
 import styled from '@emotion/styled'
+import { HideSourceRounded } from '@mui/icons-material';
+import { IconButton } from '@mui/material';
 import Head from 'next/head'
+import { useState } from 'react';
 import Sidebar from '../components/Sidebar'
 
 export default function Home() {
+
+  
+  const [isHidden, setIsHidden] = useState(false);
+
+  addEventListener('resize',(e)=>{
+    if(window.innerWidth <= 700) 
+      setIsHidden(true);
+    else
+      setIsHidden(false)
+  })
+
+  const listenToWindowResize = ()=>{
+    addEventListener('resize',(e)=>{
+      if(window.innerWidth <= 700) 
+        setIsHidden(true);
+      else
+        setIsHidden(false)
+    })
+  }
+  
+  const handleHideSideBar = ()=>{
+    setIsHidden(!isHidden);
+  }
+
+  listenToWindowResize();
+  
   return (
     <Container>
       <Head>
@@ -11,10 +40,14 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Sidebar />
+      <Sidebar isHidden={isHidden}/>
       
       <Welcome>
         <h1>KeesApp</h1>
+
+        <HideSideBarButton onClick={handleHideSideBar} >
+          <HideSourceRounded/>
+        </HideSideBarButton>
 
         <Footer>
           <p>Created by Noopejs| 2022</p>
@@ -28,6 +61,8 @@ export default function Home() {
 
 const Container = styled.div`
   display: flex;
+  height: 100vh;
+  width: 100vw;
 `;
 
 const Welcome = styled.div`
@@ -38,7 +73,20 @@ const Welcome = styled.div`
   color: rgb(54, 215, 183);
   flex: 1;
   background-color: whitesmoke;
+  position: relative;
 `;
+
+const HideSideBarButton = styled(IconButton)`
+  width: 30px;
+  height: 30px;
+  z-index: 100;
+  position: absolute;
+  right: 0;
+  top: 40%;
+  background-color: white;
+  cursor: pointer;
+`;
+
 
 const Footer = styled.footer`
   position: absolute;
